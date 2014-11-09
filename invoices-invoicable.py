@@ -7,6 +7,9 @@ incsv = csv.DictReader(sys.stdin)
 outcsv = csv.writer(sys.stdout)
 
 for row in incsv:
+    if int(row['recurring']) == 1:
+        continue
+
     if row['total'] == "100.00":
         desc = "Monthly Invoice - Room"
     elif row['total'] == "50.00":
