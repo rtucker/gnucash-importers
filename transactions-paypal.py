@@ -111,6 +111,7 @@ try:
             if invoice is not None:
                 invoice.BeginEdit()
                 invoice.ApplyPayment(newtx, from_acct, rat(-gross), rat(1), newtx.RetDatePostedTS(), "Imported from PayPal", num)
+                invoice.AutoApplyPayments()
                 invoice.CommitEdit()
 
             s3 = Split(book)
