@@ -1,52 +1,30 @@
 #!/usr/bin/python
 
+TESTING=False
+
 import csv
 import sys
 
 from decimal import Decimal
-from gnucash import Session, Transaction, Split, GncNumeric
+
+from gnucashlib import Gnucash
 
 if len(sys.argv) != 2:
     print "usage: %s infile" % sys.argv[0]
     sys.exit(1)
 
-def account_from_path(top_account, account_path, original_path=None):
-    if original_path==None: original_path = account_path
-    account, account_path = account_path[0], account_path[1:]
+if TESTING:
+    filename = "/home/rtucker/Dropbox/Projects/Interlock/gnucash-test/interlock-rochester-test.gnucash"
+else:
+    filename = "/home/rtucker/Dropbox/Projects/Interlock/gnucash-prod/interlock-rochester.gnucash"
 
-    account = top_account.lookup_by_name(account)
-    if account.get_instance() == None:
-        raise Exception(
-            "path " + ''.join(original_path) + " could not be found")
-    if len(account_path) > 0 :
-        return account_from_path(account, account_path, original_path)
-    else:
-        return account
+with Gnucash(filename) as gc:
 
-def rat(val):
-    s = int(round(val*100))
-    return GncNumeric(s, 100)
+    from_acct = gc.account("Assets:Current Assets:PayPal")
+    fee_acct = gc.account("Expenses:Bank Service Charge")
+    posted_acct = gc.account("Assets:Accounts Receivable")
 
-try:
-    session = Session(book_uri="/home/rtucker/Dropbox/Projects/Interlock/gnucash-prod/interlock-rochester.gnucash")
-    #session = Session(book_uri="/home/rtucker/Dropbox/Projects/Interlock/gnucash-test/interlock-rochester-test.gnucash")
-    book = session.book
-    root_account = book.get_root_account()
-
-    commod_tab = session.book.get_table()
-    USD = commod_tab.lookup("ISO4217","USD")
-
-    from_acct = account_from_path(root_account, "Assets:Current Assets:PayPal".split(':'))
-
-    fee_acct = account_from_path(root_account, "Expenses:Bank Service Charge".split(':'))
-
-    seen_nums = []
-
-    for split in from_acct.GetSplitList():
-        txn = split.parent
-        if txn.GetNum() not in seen_nums:
-            seen_nums.append(txn.GetNum().strip())
-
+    # Read in CSV from PayPal
     incsv = csv.DictReader(open(sys.argv[1], 'rb'), skipinitialspace=True)
 
     for row in incsv:
@@ -78,72 +56,52 @@ try:
             if row['Item ID'].startswith('INV'):
                 account = 'Income:Member Dues'
                 notes += ' (%s)' % row['Item ID']
+            elif "Donation" in row["Type"]:
+                account = 'Income:Donations'
+            elif "Meraki" in row["Name"]:
+                account = 'Income:Meraki'
 
-        to_acct = account_from_path(root_account, account.split(':'))
+        to_acct = gc.account(account)
 
         if row['Item ID'] is not "":
-            invoice = book.InvoiceLookupByID(row['Item ID'])
-            #invoice = book.InvoiceLookupByID("000001")
+            invoice = gc.InvoiceLookupByID(row['Item ID'])
         else:
             invoice = None
 
-        if num.strip() not in seen_nums:
-            print num, date, description, gross, invoice
-            newtx = Transaction(book)
-            newtx.BeginEdit()
-            newtx.SetCurrency(USD)
+        if not gc.seen(from_acct, num):
+            print "New Transaction:", num, date, description, gross, invoice.GetID() if invoice is not None else 'N/A', account
+            newtx = gc.NewTransaction()
             newtx.SetNum(num)
             newtx.SetDate(day, month, year)
             newtx.SetDescription(description)
             newtx.SetNotes(notes)
 
-            s1 = Split(book)
-            s1.SetParent(newtx)
-            s1.SetAccount(from_acct)
-            s1.SetAmount(rat(net))
-            s1.SetValue(rat(net))
-            s2 = Split(book)
-            s2.SetParent(newtx)
-            s2.SetAccount(to_acct)
-            s2.SetAmount(rat(gross))
-            s2.SetValue(rat(gross))
+            s1 = gc.NewSplit(newtx, from_acct, net)
+            s2 = gc.NewSplit(newtx, to_acct, gross)
 
             if invoice is not None:
-                invoice.BeginEdit()
-                invoice.ApplyPayment(newtx, from_acct, rat(-gross), rat(1), newtx.RetDatePostedTS(), "Imported from PayPal", num)
-                invoice.AutoApplyPayments()
-                invoice.CommitEdit()
+                # The invoice payment handler is a little bit destructive.
+                # So, we do it here before we apply the fee, otherwise
+                # an imbalance occurs.
+                gc.PayInvoiceWithTransaction(invoice, newtx, from_acct, gross, "Paid via Invoiceable.co -> PayPal", num)
+                print "--> Applied to invoice:", invoice.GetID()
+                print "    Customer Balance:", invoice.GetOwner().GetBalanceInCurrency(gc.commods['USD'])
+            elif account is not 'Income:Donations':
+                # Try to apply it to a customer
+                customer = gc.GetCustomerByEmail(row['From Email Address'])
+                if customer is not None:
+                    gc.ApplyPaymentToCustomer(customer, newtx, posted_acct, from_acct, gross, "Paid via PayPal", num)
+                    print "--> Applied to customer:", customer.GetName()
+                    print "    Customer Balance:", customer.GetBalanceInCurrency(gc.commods['USD'])
 
-            s3 = Split(book)
-            s3.SetParent(newtx)
-            s3.SetAccount(fee_acct)
-            s3.SetAmount(rat(fee))
-            s3.SetValue(rat(fee))
+            s3 = gc.NewSplit(newtx, fee_acct, fee)
 
-            imb = newtx.GetImbalanceValue()
-
-            print "  imbalance: %s" % imb
-
-            print "  balanced? %s" % newtx.IsBalanced()
-
-            for split in newtx.GetSplitList():
-                if split.GetValue().to_double() == 0.0:
-                    split.Destroy()
-
-            if not newtx.IsBalanced():
-                for (commod, val) in newtx.GetImbalance():
-                    print val.to_string(), commod.get_mnemonic()
-
-                print "ROLLBACK"
+            if gc.TransactionReadyToCommit(newtx):
+                newtx.CommitEdit()
+            else:
+                print "ROLLBACK: IMBALANCE"
                 newtx.RollbackEdit()
                 break
-            else:
-                print "COMMIT"
-                newtx.CommitEdit()
 
-    session.save()
 
-finally:
-    if "session" in locals():
-        session.end()
-
+    gc.save()
