@@ -47,6 +47,7 @@ with Gnucash(filename) as gc:
             account = 'Expenses:Miscellaneous'
             if row['Name'] == 'Bank Account':
                 account = 'Assets:Current Assets:Checking Account'
+                description = "Transfer from PayPal to Checking Account"
             if row['Name'] == 'dennis MAGUIRE':
                 account = 'Expenses:Rent'
 
@@ -86,7 +87,7 @@ with Gnucash(filename) as gc:
                 gc.PayInvoiceWithTransaction(invoice, newtx, from_acct, gross, "Paid via Invoiceable.co -> PayPal", num)
                 print "--> Applied to invoice:", invoice.GetID()
                 print "    Customer Balance:", invoice.GetOwner().GetBalanceInCurrency(gc.commods['USD'])
-            elif account is not 'Income:Donations':
+            elif account is 'Income:Other Income' and row['From Email Address'] != "":
                 # Try to apply it to a customer
                 customer = gc.GetCustomerByEmail(row['From Email Address'])
                 if customer is not None:
