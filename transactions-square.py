@@ -29,7 +29,8 @@ with Gnucash(filename) as gc:
 
     for row in incsv:
         month, day, year = [int(f) for f in row['Date'].split('/')]
-        date = '%04d-%02d-%02d' % (year+2000, month, day)
+        year += 2000   # Y2.1k compliance
+        date = '%04d-%02d-%02d' % (year, month, day)
 
         num = row['Transaction ID']
 
