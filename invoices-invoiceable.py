@@ -30,7 +30,7 @@ for row in incsv:
         date,                   # date_opened
         row['client_id'],       # owner_id
         "",                     # billingid
-        "invoicable import",                     # notes
+        "invoiceable import",                     # notes
         date,                   # date
         desc,                   # desc
         "Material",                 # action

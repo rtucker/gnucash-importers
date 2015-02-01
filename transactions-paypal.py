@@ -84,7 +84,7 @@ with Gnucash(filename) as gc:
                 # The invoice payment handler is a little bit destructive.
                 # So, we do it here before we apply the fee, otherwise
                 # an imbalance occurs.
-                gc.PayInvoiceWithTransaction(invoice, newtx, from_acct, gross, "Paid via Invoiceable.co -> PayPal", num)
+                gc.PayInvoiceWithTransaction(invoice, newtx, from_acct, gross, "Paid via Invoiceable.com -> PayPal", num)
                 print "--> Applied to invoice:", invoice.GetID()
                 print "    Customer Balance:", invoice.GetOwner().GetBalanceInCurrency(gc.commods['USD'])
             elif account is 'Income:Other Income' and row['From Email Address'] != "":
