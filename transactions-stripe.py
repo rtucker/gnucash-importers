@@ -42,9 +42,9 @@ with Gnucash(filename) as gc:
         fee =    Decimal(row['Fee'])
         net =   -(gross+fee)
 
-        print("Gross: $%s" % gross)
-        print("Fee: $%s" % fee)
-        print("Net: $%s" % net)
+        #print("Gross: $%s" % gross)
+        #print("Fee: $%s" % fee)
+        #print("Net: $%s" % net)
 
         # Guess the account
         if net < 0.00:
