@@ -3,6 +3,8 @@
 import csv
 import sys
 
+POST_ACCOUNT = "Assets:Accounts Receivable"
+
 incsv = csv.DictReader(sys.stdin)
 outcsv = csv.writer(sys.stdout)
 
@@ -31,7 +33,6 @@ for row in incsv:
 
     outcsv.writerow([
         "INV" + row['ref'],     # id
-        #row['ref'],            # id
         date,                   # date_opened
         row['client_id'],       # owner_id
         "",                     # billingid
@@ -42,15 +43,15 @@ for row in incsv:
         acct,                   # account
         "1",                    # quantity
         row['total'],           # price
-        "", # disc_type
-        "", # disc_how
-        "",                     # discount
-        "", # taxable
+        "%",                    # disc_type
+        "",                     # disc_how
+        "0",                    # discount
+        "",                     # taxable
         "",                     # taxincluded
         "",                     # tax_table
         date,                   # date_posted
         duedate,                # due_date
-        "Assets:Accounts Receivable",   # account_posted
-        "", # memo_posted
+        POST_ACCOUNT,           # account_posted
+        "",                     # memo_posted
         "yes",                  # accu_splits
     ])
