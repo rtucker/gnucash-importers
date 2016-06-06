@@ -105,3 +105,21 @@ class Gnucash:
         q.destroy()
 
         return c
+
+    def GetCustomerByName(self, name):
+        q = Query()
+        q.search_for('gncCustomer')
+        q.set_book(self._book)
+
+        c = None
+
+        for result in q.run():
+            tmp = Customer(instance=result)
+            if tmp.GetName().lower() in name.lower():
+                c = tmp
+                break
+
+        q.destroy()
+
+        return c
+
