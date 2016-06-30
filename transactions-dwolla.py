@@ -76,14 +76,14 @@ with Gnucash(filename) as gc:
                 # The invoice payment handler is a little bit destructive.
                 # So, we do it here before we apply the fee, otherwise
                 # an imbalance occurs.
-                gc.PayInvoiceWithTransaction(invoice, newtx, from_acct, gross, "Paid via Invoiceable.co -> Square", num)
+                gc.PayInvoiceWithTransaction(invoice, newtx, from_acct, gross, "Paid via Dwolla", num)
                 print "--> Applied to invoice:", invoice.GetID()
                 print "    Customer Balance:", invoice.GetOwner().GetBalanceInCurrency(gc.commods['USD'])
             elif net > 0.00 and account is not 'Income:Donations':
                 # Try to apply it to a customer
                 customer = gc.GetCustomerByName(description)
                 if customer is not None:
-                    gc.ApplyPaymentToCustomer(customer, newtx, posted_acct, from_acct, gross, "Paid via Square", num)
+                    gc.ApplyPaymentToCustomer(customer, newtx, posted_acct, from_acct, gross, "Paid via Dwolla", num)
                     print "--> Applied to customer:", customer.GetName()
                     print "    Customer Balance:", customer.GetBalanceInCurrency(gc.commods['USD'])
 
