@@ -28,7 +28,7 @@ outcsv = csv.writer(sys.stdout)
 with Gnucash(filename) as gc:
 
     for row in incsv:
-        total = Decimal(row['Total'])
+        total = Decimal(row['Total'].replace(',', ''))
         txn_fee = Decimal(row['Tax'])
         dues = total - txn_fee
 
