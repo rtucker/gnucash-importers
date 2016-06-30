@@ -34,7 +34,7 @@ with Gnucash(filename) as gc:
         num = row['id']
 
         #description = row['Name']
-        description = row['Customer Description']
+        description = row['Customer Description'] or row['Card Name'] or row['Card Brand'] + " " + row['Card Last4']
 
         notes = row['Statement Descriptor']
 
@@ -89,12 +89,13 @@ with Gnucash(filename) as gc:
                 # The invoice payment handler is a little bit destructive.
                 # So, we do it here before we apply the fee, otherwise
                 # an imbalance occurs.
-                gc.PayInvoiceWithTransaction(invoice, newtx, from_acct, gross, "Paid via Invoiceable.co -> Stripe", num)
+                gc.PayInvoiceWithTransaction(invoice, newtx, from_acct, gross, "Paid via Stripe", num)
                 print "--> Applied to invoice:", invoice.GetID()
                 print "    Customer Balance:", invoice.GetOwner().GetBalanceInCurrency(gc.commods['USD'])
             elif account is not 'Income:Donations':
                 # Try to apply it to a customer
-                customer = gc.GetCustomerByEmail(row['Customer Email'])
+                #customer = gc.GetCustomerByEmail(row['Customer Email'])
+                customer = gc.GetCustomerByName(description)
                 if customer is not None:
                     gc.ApplyPaymentToCustomer(customer, newtx, posted_acct, from_acct, gross, "Paid via Stripe", num)
                     print "--> Applied to customer:", customer.GetName()
