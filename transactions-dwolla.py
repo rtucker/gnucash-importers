@@ -81,7 +81,9 @@ with Gnucash(filename) as gc:
                 print "    Customer Balance:", invoice.GetOwner().GetBalanceInCurrency(gc.commods['USD'])
             elif net > 0.00 and account is not 'Income:Donations':
                 # Try to apply it to a customer
-                customer = gc.GetCustomerByName(description)
+                cname = description.replace("Receive from ", "")
+                print "Trying customer:", cname
+                customer = gc.GetCustomerByName(cname)
                 if customer is not None:
                     gc.ApplyPaymentToCustomer(customer, newtx, posted_acct, from_acct, gross, "Paid via Dwolla", num)
                     print "--> Applied to customer:", customer.GetName()

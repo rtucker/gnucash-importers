@@ -2,6 +2,7 @@
 
 TESTING=False
 
+import codecs
 import csv
 import sys
 
@@ -25,9 +26,16 @@ with Gnucash(filename) as gc:
     posted_acct = gc.account("Assets:Accounts Receivable")
 
     # Read in CSV from PayPal
-    incsv = csv.DictReader(open(sys.argv[1], 'rb'), skipinitialspace=True)
+    #incsv = csv.DictReader(open(sys.argv[1], 'rb'), skipinitialspace=True)
+    incsv = csv.DictReader(codecs.open(sys.argv[1], 'r', 'utf-8-sig'), skipinitialspace=True)
 
     for row in incsv:
+        if row['Status'] != 'Completed':
+            continue
+
+        if row['Type'] == 'Shopping Cart Item':
+            continue
+
         month, day, year = [int(f) for f in row['Date'].split('/')]
         date = '%04d-%02d-%02d' % (year, month, day)
 
@@ -45,11 +53,9 @@ with Gnucash(filename) as gc:
         if net < 0.00:
             # debit
             account = 'Expenses:Miscellaneous'
-            if row['Name'] == 'Bank Account':
+            if row['Type'] == 'General Withdrawal':
                 account = 'Assets:Current Assets:Checking Account'
                 description = "Transfer from PayPal to Checking Account"
-            if row['Name'] == 'dennis MAGUIRE':
-                account = 'Expenses:Rent'
 
         else:
             # credit
@@ -59,8 +65,6 @@ with Gnucash(filename) as gc:
                 notes += ' (%s)' % row['Item ID']
             elif "Donation" in row["Type"]:
                 account = 'Income:Donations'
-            elif "Meraki" in row["Name"]:
-                account = 'Income:Meraki'
 
         to_acct = gc.account(account)
 
@@ -87,9 +91,15 @@ with Gnucash(filename) as gc:
                 gc.PayInvoiceWithTransaction(invoice, newtx, from_acct, gross, "Paid via Invoiceable.com -> PayPal", num)
                 print "--> Applied to invoice:", invoice.GetID()
                 print "    Customer Balance:", invoice.GetOwner().GetBalanceInCurrency(gc.commods['USD'])
+
             elif account is 'Income:Other Income' and row['From Email Address'] != "":
-                # Try to apply it to a customer
-                customer = gc.GetCustomerByEmail(row['From Email Address'])
+                customer = None
+
+                if row['From Email Address'] != "":
+                    customer = gc.GetCustomerByEmail(row['From Email Address'])
+                if row['Name'] != "" and customer is None:
+                    customer = gc.GetCustomerByName(row['Name'])
+
                 if customer is not None:
                     gc.ApplyPaymentToCustomer(customer, newtx, posted_acct, from_acct, gross, "Paid via PayPal", num)
                     print "--> Applied to customer:", customer.GetName()

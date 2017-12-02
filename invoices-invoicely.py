@@ -30,7 +30,8 @@ with Gnucash(filename) as gc:
     for row in incsv:
         total = Decimal(row['Total'].replace(',', ''))
         txn_fee = Decimal(row['Tax'])
-        dues = total - txn_fee
+        discount = -Decimal(row['Discount'])
+        dues = total - txn_fee + discount
 
         if dues in AMOUNTS:
             desc = "Monthly Dues - " + AMOUNTS[dues]
@@ -58,6 +59,11 @@ with Gnucash(filename) as gc:
             sys.stderr.write('%s: could not find "%s"\n' % (invoiceid, row['Client']))
             continue
 
+        if txn_fee == discount:
+            per_disc = "100"
+        else:
+            per_disc = "0"
+
         if txn_fee > Decimal("0.00"):
             outcsv.writerow([
                 invoiceid,     # id
@@ -73,7 +79,7 @@ with Gnucash(filename) as gc:
                 txn_fee/dues,           # price
                 "%",                    # disc_type
                 "",                     # disc_how
-                "0",                    # discount
+                per_disc,                    # discount
                 "",                     # taxable
                 "",                     # taxincluded
                 "",                     # tax_table

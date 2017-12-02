@@ -40,7 +40,7 @@ class Gnucash:
         account, account_path = account_path[0], account_path[1:]
 
         account = top_account.lookup_by_name(account)
-        if account.get_instance() == None:
+        if account == None or account.get_instance() == None:
             raise Exception(
                 "path " + ''.join(original_path) + " could not be found")
         if len(account_path) > 0 :
@@ -85,6 +85,7 @@ class Gnucash:
         invoice.CommitEdit()
 
     def ApplyPaymentToCustomer(self, customer, txn, post_acct, from_acct, gross, memo, num):
+        print("Applying payment of %s to customer %s" % (gross, customer.GetName()))
         customer.BeginEdit()
         customer.ApplyPayment(txn, None, post_acct, from_acct, self.rat(-gross), self.rat(1), txn.RetDatePostedTS(), memo, num, True)
         customer.CommitEdit()
